@@ -1,0 +1,90 @@
+[DOCUMENT, TITLE: Jaso Requirements]
+[GRAMMAR]
+ELEMENTS:
+- DOCUMENT:
+    REQ_LINKS:
+    - role: Parent
+      rule: "refers-to-document(DOCUMENT)"
+    - role: Child
+      rule: "is-child-of(DOCUMENT)"
+- REQUIREMENT:
+    REQ_LINKS:
+    - role: Refines
+      rule: "refines(REQUIREMENT)"
+    - role: Relates
+      rule: "relates-to(REQUIREMENT)"
+- SECTION
+
+[SECTION, TITLE: Overview]
+[REQUIREMENT, ID: REQ-JASO-001, TITLE: Core Functionality]
+STATEMENT:
+The system, named Jaso, shall read jazz standards specified in LilyPond format, and generate guitar tablature for the melody and an optimized chord progression.
+
+RATIONALE:
+To provide musicians with an easy-to-play arrangement of jazz standards, minimizing difficult fingering transitions.
+[/REQUIREMENT]
+[/SECTION]
+
+[SECTION, TITLE: Input Formats]
+[REQUIREMENT, ID: REQ-JASO-002, TITLE: LilyPond Input]
+STATEMENT:
+The system shall accept a file in LilyPond format (.ly) as the primary input for the musical piece.
+It must parse:
+1. The melody line, including notes and rhythms.
+2. The chord symbols and their durations.
+
+COMMENT:
+We will need a robust LilyPond parsing library or a custom parser to extract the musical information accurately.
+[/REQUIREMENT]
+
+[REQUIREMENT, ID: REQ-JASO-003, TITLE: Chord Shapes Input]
+STATEMENT:
+The system shall load a library of possible chord shapes (voicings) from a JSON file.
+Each entry in the JSON file should define:
+1. The chord name (e.g., "Cmaj7", "G7b9").
+2. A list of possible fingerings (voicings) for that chord.
+3. Each voicing must specify the fret and string for each note.
+
+RATIONALE:
+This provides a flexible way to define the universe of possible chords the system can choose from.
+[/REQUIREMENT]
+[/SECTION]
+
+[SECTION, TITLE: Core Logic]
+[REQUIREMENT, ID: REQ-JASO-004, TITLE: Ease of Playing Metric]
+STATEMENT:
+The system shall define and use a metric to quantify the "ease of playing" between two consecutive chords. This metric should be based on minimizing the total fret-hand movement required.
+
+COMMENT:
+The primary cost function will be the sum of the fret distances that each finger has to travel between the end of the first chord and the start of the second chord. Other factors like barring or finger reuse could be considered in later versions.
+[/REQUIREMENT]
+
+[REQUIREMENT, ID: REQ-JASO-005, TITLE: Optimal Chord Progression Algorithm]
+STATEMENT:
+Given a sequence of chord symbols from the LilyPond file, the system shall use the "ease of playing" metric to find the sequence of chord voicings from the JSON library that has the lowest total transition cost.
+
+RATIONALE:
+This is the core optimization problem. An algorithm like Viterbi or another dynamic programming approach is likely suitable here to find the "path of least resistance" through the possible voicings.
+[/REQUIREMENT]
+[/SECTION]
+
+[SECTION, TITLE: Output]
+[REQUIREMENT, ID: REQ-JASO-006, TITLE: Tablature Generation]
+STATEMENT:
+The system shall generate a single output file containing:
+1. The melody line in standard guitar tablature.
+2. The selected optimal chord voicings displayed in a clear, readable format (e.g., chord diagrams or tablature) aligned with the melody.
+[/REQUIREMENT]
+[/SECTION]
+
+[SECTION, TITLE: Non-Functional Requirements]
+[REQUIREMENT, ID: REQ-JASO-007, TITLE: Command-Line Interface]
+STATEMENT:
+The system shall be executable as a Python script from the command line.
+It should accept arguments for:
+1. The input LilyPond file path.
+2. The input chord shapes JSON file path.
+3. The output tablature file path.
+[/REQUIREMENT]
+[/SECTION]
+[/DOCUMENT]
