@@ -11,7 +11,7 @@ Jaso is a Python-based command-line tool designed to assist musicians in creatin
 
 ## Development Process
 
-This entire repository and its codebase were developed exclusively with **wibe coding using Gemini**. Every line of code, every file, and every command executed was generated and guided by the Gemini AI model in an interactive command-line environment.
+This entire repository and its codebase were developed exclusively with **vibe coding using Gemini**. Every line of code, every file, and every command executed was generated and guided by the Gemini AI model in an interactive command-line environment.
 
 ## Getting Started
 
