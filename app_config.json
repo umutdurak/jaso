@@ -1,0 +1,12 @@
+{
+    "layout": {
+        "beats_per_measure": 4,
+        "measures_per_line": 2,
+        "global_cpqn": 12
+    },
+    "optimizer": {
+        "melody_fret_weight": 5,
+        "melody_string_weight": 2,
+        "default_chord_duration": 4.0
+    }
+}

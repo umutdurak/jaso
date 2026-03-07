@@ -8,7 +8,17 @@ Jaso is a Python-based command-line tool designed to assist musicians in creatin
 -   **Chord Library Integration:** Utilizes a comprehensive JSON-based library of guitar chord voicings with style-specific "flavors" (Classical, Freddie Green, Gypsy Jazz).
 -   **Dual-Staff Tablature:** Generates a professional "Dual-Staff" layout, separating the **Accompaniment (Chords)** and the **Lead (Melody)** into two vertically aligned rhythmic grids.
 -   **Smart Optimization:** Employs a Viterbi dynamic programming algorithm to find the absolute easiest sequence of both chord voicings and melody fingerings, minimizing fretboard hand movement.
--   **Rhythmic Alignment:** Features a fixed 1/8th note width grid with explicit measure bars (`|`), section markers (`[A]`), and synchronized lyrics.
+-   **Instrument Decoupling:** Supports any stringed instrument (e.g., Ukulele, Banjo, or custom tunings) via external JSON instrument definitions.
+-   **Extensible Configuration:** All layout parameters (CPQN, measures per line), musical defaults, and optimization weights are externalized to JSON.
+-   **Rhythmic Alignment:** Features a fixed rhythmic grid with explicit measure bars (`|`), section markers (`[A]`), and synchronized lyrics.
+
+## Configuration
+
+Jaso is designed to be highly configurable without modifying the source code:
+
+-   **[app_config.json](app_config.json):** Controls layout settings (`beats_per_measure`, `measures_per_line`, `global_cpqn`) and optimizer cost weights (`melody_fret_weight`, `melody_string_weight`).
+-   **[instrument_guitar_standard.json](instrument_guitar_standard.json):** Defines the instrument's open string MIDI values, string display order, and chromatic scale normalization.
+-   **[quality_config.json](quality_config.json):** Centralizes base chord abbreviations and fallback logic.
 
 ## Development Process
 

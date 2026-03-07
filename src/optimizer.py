@@ -1,4 +1,5 @@
 import math
+import json
 
 def calculate_transition_cost(voicing1, voicing2):
     # Calculates the cost of transitioning between two chord voicings.
@@ -92,9 +93,15 @@ def find_optimal_progression(parsed_chords, chord_library_instance):
         
     return optimal_voicings
 
-def get_all_note_positions(note_name):
-    # 0: 'e', 1: 'B', 2: 'G', 3: 'D', 4: 'A', 5: 'E'
-    string_notes = [64, 59, 55, 50, 45, 40] 
+def get_all_note_positions(note_name, instrument_config=None):
+    if instrument_config is None:
+        with open("instrument_guitar_standard.json", "r") as f:
+            instrument_config = json.load(f)
+            
+    # Load MIDI values from config
+    open_string_midi = instrument_config.get("open_string_midi", {})
+    string_order = instrument_config.get("string_order", ["e", "B", "G", "D", "A", "E"])
+    string_notes = [open_string_midi.get(s, 0) for s in string_order]
     
     from music21 import pitch
     try:
@@ -111,26 +118,35 @@ def get_all_note_positions(note_name):
             
     return positions
 
-def calculate_melody_transition_cost(pos1, pos2):
+def calculate_melody_transition_cost(pos1, pos2, app_config=None):
+    if app_config is None:
+        with open("app_config.json", "r") as f:
+            app_config = json.load(f)
+            
+    optimizer_cfg = app_config.get("optimizer", {})
+    fret_weight = optimizer_cfg.get("melody_fret_weight", 5)
+    string_weight = optimizer_cfg.get("melody_string_weight", 2)
+
     # Cost function for melody transitions
-    # Penalizes large fret jumps heavily, and smaller string jumps moderately
     fret_dist = abs(pos1['fret'] - pos2['fret'])
     string_dist = abs(pos1['string_idx'] - pos2['string_idx'])
     
-    # Heuristic: fret distance is primary, string distance is secondary
-    return (fret_dist * 5) + (string_dist * 2)
+    return (fret_dist * fret_weight) + (string_dist * string_weight)
 
 def find_optimal_melody_path(melody_events):
-    # Finds the optimal sequence of (string, fret) positions for a melody
-    # using the Viterbi algorithm to minimize hand movement.
-    
+    # Load configs once
+    with open("app_config.json", "r") as f:
+        app_config = json.load(f)
+    with open("instrument_guitar_standard.json", "r") as f:
+        instrument_config = json.load(f)
+
     note_events = [e for e in melody_events if e['type'] == 'note']
     if not note_events:
         return []
         
     all_options = []
     for event in note_events:
-        options = get_all_note_positions(event['name'])
+        options = get_all_note_positions(event['name'], instrument_config)
         all_options.append(options)
         
     # Standard Viterbi DP
@@ -161,7 +177,7 @@ def find_optimal_melody_path(melody_events):
                 if not prev_pos: # Handle placeholder from previous missing note
                     transition_cost = 0
                 else:
-                    transition_cost = calculate_melody_transition_cost(prev_pos, curr_pos)
+                    transition_cost = calculate_melody_transition_cost(prev_pos, curr_pos, app_config)
                     
                 total_cost = dp[step - 1][prev_j][0] + transition_cost
                 

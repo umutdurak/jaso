@@ -1,0 +1,29 @@
+{
+    "aliases": {
+        "": "Major",
+        "M": "Major",
+        "MAJ": "Major",
+        "7": "Dominant 7",
+        "MAJ7": "Major 7",
+        "M7": "Minor 7",
+        "-7": "Minor 7",
+        "MIN7": "Minor 7",
+        "-": "Minor",
+        "MIN": "Minor",
+        "M7B5": "Minor 7 Flat 5",
+        "-7B5": "Minor 7 Flat 5",
+        "DIM7": "Diminished 7",
+        "O7": "Diminished 7",
+        "O": "Diminished 7",
+        "6": "Major 6",
+        "MIN6": "Minor 6",
+        "-6": "Minor 6",
+        "M6": "Minor 6",
+        "SUS": "Dominant 7"
+    },
+    "fallbacks": {
+        "Major": "Major 7",
+        "Minor": "Minor 7",
+        "Minor 7 Flat 5": "Diminished 7"
+    }
+}

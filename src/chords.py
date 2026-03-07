@@ -4,32 +4,41 @@ import re
 class ChordLibrary:
     def __init__(self, file_path, subs_file_path=None):
         self.chord_data = self._load_json_data(file_path)
-        self.substitutions = self._load_json_data(subs_file_path).get("substitutions", []) if subs_file_path else []
         
-        self.note_to_midi = {
-            'C': 0, 'C#': 1, 'Db': 1, 'D': 2, 'D#': 3, 'Eb': 3, 'E': 4, 'F': 5,
-            'F#': 6, 'Gb': 6, 'G': 7, 'G#': 8, 'Ab': 8, 'A': 9, 'A#': 10, 'Bb': 10, 'B': 11
-        }
-        self.midi_to_note = {v: k for k, v in self.note_to_midi.items()}
-        self.open_string_midi = {
-            'E': 40, # Low E
-            'A': 45,
-            'D': 50,
-            'G': 55,
-            'B': 59,
-            'e': 64  # High E
-        }
-        self.string_order = ['E', 'A', 'D', 'G', 'B', 'e']
-        self.string_map = {
-            5: 'E', 4: 'A', 3: 'D', 2: 'G', 1: 'B', 0: 'e'
-        }
+        # Load quality configuration
+        base_config = self._load_json_data("quality_config.json")
+        self.aliases = base_config.get("aliases", {})
+        self.fallbacks = base_config.get("fallbacks", {})
+        
+        # Load substitutions and style-specific settings
+        subs_data = self._load_json_data(subs_file_path) if subs_file_path else {}
+        self.substitutions = subs_data.get("substitutions", [])
+        
+        # Merge style-specific aliases and fallbacks
+        if "aliases" in subs_data:
+            self.aliases.update(subs_data["aliases"])
+        if "fallbacks" in subs_data:
+            self.fallbacks.update(subs_data["fallbacks"])
+            
+        # Load instrument configuration (default to guitar)
+        instrument_config = self._load_json_data("instrument_guitar_standard.json")
+        self.open_string_midi = instrument_config.get("open_string_midi", {})
+        self.string_order = instrument_config.get("string_order", [])
+        self.notes = instrument_config.get("notes", [])
+        self.enharmonics = instrument_config.get("enharmonic_equivalents", {})
+        
+        # Derived mappings
+        self.note_to_midi = {note: i % 12 for i, note in enumerate(self.notes)}
+        self.string_map = {len(self.string_order)-1-i: s for i, s in enumerate(self.string_order)}
 
     def _load_json_data(self, file_path):
         try:
             with open(file_path, 'r') as f:
                 return json.load(f)
         except FileNotFoundError:
-            print(f"Error: Chord library file not found at {file_path}")
+            # Silent fail for substitutions as they are optional, but log for library
+            if "quality_config" not in file_path and "substitutions" not in file_path:
+                print(f"Error: Chord library file not found at {file_path}")
             return {}
         except json.JSONDecodeError:
             print(f"Error: Could not decode JSON from {file_path}")
@@ -41,14 +50,15 @@ class ChordLibrary:
     def _parse_chord_name(self, chord_name):
         original_chord_name = chord_name
         
-        # 1. Extract the root note (e.g. C, C#, Bb). 
-        # Match A-G, optionally followed by exactly one 'b' or '#'
-        root_match = re.match(r'^([A-G][b#]?)(.*)', chord_name, re.IGNORECASE)
+        # 1. Extract the root note (e.g. C, C#, Bb, B-). 
+        # Match A-G, optionally followed by 'b', '#', or '-' (for flat)
+        root_match = re.match(r'^([A-G][b#\-]?)(.*)', chord_name, re.IGNORECASE)
         if not root_match:
             return None, None
             
         root_note = root_match.group(1)
-        # Normalize the root note (capitalize first letter, keep b/lowercase)
+        # Normalize root: replace '-' with 'b' for flat, handle capitalization
+        root_note = root_note.replace('-', 'b')
         if len(root_note) == 2:
             root_note = root_note[0].upper() + root_note[1].lower()
         else:
@@ -56,41 +66,17 @@ class ChordLibrary:
             
         remaining_quality = root_match.group(2).strip().upper()
 
-        # Map common quality abbreviations to full names from JSON
-        quality_map = {
-            '': 'Major',
-            'M': 'Major',
-            'MAJ': 'Major',
-            '7': 'Dominant 7',
-            'MAJ7': 'Major 7',
-            'M7': 'Minor 7',
-            '-7': 'Minor 7',
-            'MIN7': 'Minor 7',
-            '-': 'Minor',
-            'MIN': 'Minor',
-            'M7B5': 'Minor 7 Flat 5',
-            '-7B5': 'Minor 7 Flat 5',
-            'DIM7': 'Diminished 7',
-            'O7': 'Diminished 7',
-            'O': 'Diminished 7',
-            '6': 'Major 6',
-            'MIN6': 'Minor 6',
-            '-6': 'Minor 6',
-            'M6': 'Minor 6',
-            'AUG7': 'Dominant 7', # Map to Dominant 7 for now
-            '7ALTER#5': 'Dominant 7', # Specific case for F7 alter #5
-        }
+        # Clean up remaining quality string (remove spaces, dots, and "ADDX")
+        clean_quality = remaining_quality.replace(' ', '').replace('.', '')
+        clean_quality = re.sub(r'ADD\d+', '', clean_quality)
         
-        # Clean up remaining quality string (remove spaces)
-        clean_quality = remaining_quality.replace(' ', '')
-        
-        # Try direct match first
-        standardized_quality = quality_map.get(clean_quality, None)
+        # Try direct match first with dynamic aliases
+        standardized_quality = self.aliases.get(clean_quality, None)
         if standardized_quality:
             return root_note, standardized_quality
 
         # Try to find a quality that is a substring of the remaining_quality
-        for key, value in quality_map.items():
+        for key, value in sorted(self.aliases.items(), key=lambda x: len(x[0]), reverse=True):
             if key and clean_quality.startswith(key):
                 return root_note, value
 
@@ -102,9 +88,8 @@ class ChordLibrary:
         return root_note, 'Major'
 
     def _get_fret_for_note_on_string(self, target_note, open_string_note):
-        notes = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
-        target_note_index = notes.index(target_note)
-        open_string_note_index = notes.index(open_string_note)
+        target_note_index = self.notes.index(target_note)
+        open_string_note_index = self.notes.index(open_string_note)
         fret = (target_note_index - open_string_note_index + 12) % 12
         return fret
 
@@ -129,8 +114,7 @@ class ChordLibrary:
                 # Map notes like 'e' to 'E' for the note calculation
                 open_string_obj_note = open_string_note.upper() if open_string_note == 'e' else open_string_note
                 # Map note roots like 'Db' to 'C#' to match the notes array
-                equivalents = {'Db': 'C#', 'Eb': 'D#', 'Gb': 'F#', 'Ab': 'G#', 'Bb': 'A#'}
-                target_root = equivalents.get(root_note, root_note)
+                target_root = self.enharmonics.get(root_note, root_note)
                 actual_root_fret = self._get_fret_for_note_on_string(target_root, open_string_obj_note)
 
         for position in selected_voicing['positions']:
@@ -164,21 +148,26 @@ class ChordLibrary:
                 
                 # Apply root note offset if specified
                 if "root_offset" in sub:
-                     notes = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
                      # Normalize flats to sharps for lookup
-                     equivalents = {'Db': 'C#', 'Eb': 'D#', 'Gb': 'F#', 'Ab': 'G#', 'Bb': 'A#'}
-                     lookup_note = equivalents.get(root_note, root_note)
+                     lookup_note = self.enharmonics.get(root_note, root_note)
                      
-                     if lookup_note in notes:
-                         current_idx = notes.index(lookup_note)
+                     if lookup_note in self.notes:
+                         current_idx = self.notes.index(lookup_note)
                          new_idx = (current_idx + sub["root_offset"]) % 12
-                         root_note = notes[new_idx]
+                         root_note = self.notes[new_idx]
                          print(f"  Root shifted by {sub['root_offset']} to {root_note}")
                 break
 
         if quality not in self.chord_data:
-            print(f"Warning: Chord quality '{quality}' not found in library for {chord_name}")
-            return None
+            # Fallback mappings for jazz styles if quality is missing
+            if quality in self.fallbacks:
+                new_quality = self.fallbacks[quality]
+                print(f"Chord quality '{quality}' missing. Falling back to '{new_quality}' for {chord_name}")
+                quality = new_quality
+            
+            if quality not in self.chord_data:
+                print(f"Warning: Chord quality '{quality}' not found in library for {chord_name}")
+                return None
 
         voicings = self.chord_data[quality]
         if not voicings:

@@ -38,17 +38,17 @@ COMMENT:
 We will use the music21 library to extract the musical information and specific object properties accurately.
 [/REQUIREMENT]
 
-[REQUIREMENT, ID: REQ-JASO-003, TITLE: Chord Shapes Input]
+[REQUIREMENT, ID: REQ-JASO-003, TITLE: Musical Logic and Shape Input]
 STATEMENT:
-The system shall load a library of possible chord shapes (voicings) from a JSON file.
-Each entry in the JSON file should define:
+The system shall load a library of possible chord shapes (voicings) and instrument-specific tuning/normalization data from JSON files.
+Each entry in the chord JSON file should define:
 1. The chord name (e.g., "Cmaj7", "G7b9").
 2. A list of possible fingerings (voicings) for that chord.
-3. Each voicing must specify relative fret positions and define a string root. The system must dynamically compute absolute frets from these values based on the `jach` specification.
-4. An optional `substitutions_[flavor].json` file defining an override matrix for chord names and qualities (e.g., simplifying complex extensions or replacing a `m7` with an `m6`).
+3. Each voicing specifying relative fret positions and a string root.
+4. Instrument-specific configuration (`instrument_[name].json`) defining open string MIDI, string order, and enharmonic equivalents.
 
 RATIONALE:
-This guarantees compatibility with the `jach` chord format and provides a flexible way to define the universe of possible chords the system can choose from. Providing a JSON substitution matrix allows users to force specific jazz style harmonic simplifications (like Freddie Green shell voicings) before the optimization engine selects fingerings.
+To support any stringed instrument and ensure a flexible, data-driven approach to musical logic and fingering calculations.
 [/REQUIREMENT]
 [/SECTION]
 
@@ -86,6 +86,22 @@ The system shall apply style-specific chord substitutions when standard jazz fla
 RATIONALE:
 By defining mapping matrices, the system can automatically resolve generic MusicXML chords into authentic genre-specific simplifications before passing them to the optimization algorithm, preserving historical playing traditions without requiring manual user edits.
 [/REQUIREMENT]
+
+[REQUIREMENT, ID: REQ-JASO-010, TITLE: Instrument Decoupling]
+STATEMENT:
+The system shall be decoupled from guitar-specific hard-coding. It shall determine string availability, tuning, and note-to-fret mapping by loading an `instrument_[type].json` profile.
+
+RATIONALE:
+To allow the tool to generate arrangements for other stringed instruments (Ukulele, Banjo, etc.) or alternative guitar tunings (DADGAD, Open G) without code modification.
+[/REQUIREMENT]
+
+[REQUIREMENT, ID: REQ-JASO-011, TITLE: Application Configuration]
+STATEMENT:
+The system shall externalize all layout constants (beats per measure, measures per line, CPQN) and optimizer cost weights (fret distance penalties, string jump weights) into an `app_config.json` file.
+
+RATIONALE:
+To provide users with control over the visual presentation and the "playing style" logic of the optimization engine.
+[/REQUIREMENT]
 [/SECTION]
 
 [SECTION, TITLE: Output]
@@ -93,8 +109,9 @@ By defining mapping matrices, the system can automatically resolve generic Music
 STATEMENT:
 The system shall generate a single output file containing:
 1. A "Dual-Staff" layout where Accompaniment (Chords) and Lead (Melody) are rendered in separate, vertically aligned 6-string grids.
-2. The tablature grids must reflect a fixed 1/8th note resolution spacing separated by explicit standard measure bars (|).
-3. Parsed song section markers rendered above the accompaniment measures, and parsed lyrics printed below the Lead staff.
+2. The tablature grids must reflect a configurable rhythmic resolution spacing (CPQN) separated by explicit standard measure bars (|).
+3. The number of measures per line and beats per measure shall be configurable via the application settings.
+4. Parsed song section markers rendered above the accompaniment measures, and parsed lyrics printed below the Lead staff.
 
 RATIONALE:
 Providing a dual-staff layout ensures clarity between the rhythm and lead parts while maintaining a synchronized rhythmic timeline for practice.

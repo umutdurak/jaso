@@ -1,4 +1,21 @@
 {
+    "aliases": {
+        "9": "Dominant 7",
+        "11": "Dominant 7",
+        "13": "Dominant 7",
+        "MAJ9": "Major 7",
+        "M9": "Minor 7",
+        "MIN9": "Minor 7",
+        "M11": "Minor 7",
+        "M13": "Minor 7",
+        "AUG7": "Dominant 7",
+        "7ALTER#5": "Dominant 7"
+    },
+    "fallbacks": {
+        "Major": "Major 7",
+        "Minor": "Minor 7",
+        "Minor 7 Flat 5": "Diminished 7"
+    },
     "substitutions": [
         {
             "original_quality": "Minor 7",
