@@ -1,6 +1,6 @@
 import argparse
 
-from src.parser import parse_musicxml_file
+from src.parser import parse_score_file
 from src.chords import ChordLibrary
 from src.optimizer import find_optimal_progression
 from src.tablature import generate_tablature
@@ -36,8 +36,8 @@ def main():
     print(f"Chords Source: {chords_source}")
     print(f"Output file: {actual_output}")
 
-    # 1. Parse the MusicXML file
-    melody, chords, sections = parse_musicxml_file(args.musicxml_file)
+    # 1. Parse the input score (MusicXML or LilyPond)
+    melody, chords, sections = parse_score_file(args.musicxml_file)
     if melody or chords or sections:
         print("--- Parsed Melody Events (Structured) ---")
         for event in melody:

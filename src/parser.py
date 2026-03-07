@@ -1,5 +1,15 @@
-# Parses MusicXML files to extract melody and chords using music21.
 from music21 import converter, note, chord, harmony, text, expressions
+from .lily_parser import parse_lilypond_file
+
+def parse_score_file(file_path):
+    """
+    Dispatcher to choose the right parser based on file extension.
+    """
+    if file_path.endswith('.ly'):
+        return parse_lilypond_file(file_path)
+    else:
+        # Default to MusicXML for .mxl, .xml, .musicxml
+        return parse_musicxml_file(file_path)
 
 def parse_musicxml_file(file_path):
     # Parses a MusicXML file using music21 and extracts notes and chords.
