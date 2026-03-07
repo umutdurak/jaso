@@ -150,7 +150,7 @@ class ChordLibrary:
 
         return final_frets
 
-    def get_chord_voicing(self, chord_name):
+    def get_chord_voicings(self, chord_name):
         root_note, quality = self._parse_chord_name(chord_name)
         if not root_note or not quality:
             print(f"Warning: Could not parse chord name: {chord_name}")
@@ -185,11 +185,10 @@ class ChordLibrary:
             print(f"Warning: No voicings found for quality '{quality}' in library.")
             return None
 
-        # For simplicity, pick the first voicing. In a real app, you'd have selection logic.
-        selected_voicing = voicings[0]
-        
-        final_frets = self._get_absolute_frets(root_note, selected_voicing)
-        if final_frets is None:
-            return None
+        valid_voicings = []
+        for voicing in voicings:
+            final_frets = self._get_absolute_frets(root_note, voicing)
+            if final_frets is not None:
+                valid_voicings.append({'frets': final_frets, 'name': voicing['name']})
 
-        return {'frets': final_frets, 'name': selected_voicing['name']}
+        return valid_voicings if valid_voicings else None

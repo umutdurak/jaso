@@ -15,91 +15,79 @@ def calculate_transition_cost(voicing1, voicing2):
 
 def find_optimal_progression(parsed_chords, chord_library_instance):
     # This function finds the optimal chord progression.
-    # It uses a dynamic programming approach (Viterbi-like algorithm).
+    # It uses a dynamic programming approach (Viterbi algorithm).
 
     print("\n--- Optimization Process ---")
 
-    optimal_voicings = [None] * len(parsed_chords)
-    dp = []
-    paths = []
-
-    # Prepare a list of actual voicings, or None if not found
-    actual_voicings_for_progression = []
+    # List of lists of valid voicings for each chord
+    all_voicing_options = []
     for chord_event in parsed_chords:
-        voicing = chord_library_instance.get_chord_voicing(chord_event['name'])
-        actual_voicings_for_progression.append(voicing)
+        voicings = chord_library_instance.get_chord_voicings(chord_event['name'])
+        all_voicing_options.append(voicings)
+        if not voicings:
+            print(f"Warning: Chord {chord_event['name']} not found or has no voicings. Skipping.")
 
-    first_valid_chord_idx = -1
-    for i, voicing in enumerate(actual_voicings_for_progression):
-        if voicing:
-            first_valid_chord_idx = i
-            break
+    valid_indices = [i for i, voicings in enumerate(all_voicing_options) if voicings]
     
-    if first_valid_chord_idx == -1:
+    if not valid_indices:
         print("Error: No valid chords found in the progression.")
-        return optimal_voicings
-
-    # Initialize for the first valid chord
-    first_chord_voicings_list = [actual_voicings_for_progression[first_valid_chord_idx]]
-    dp.append([(0, None)] * len(first_chord_voicings_list))
-    paths.append([[0]]) # Only one voicing for the first valid chord
-    optimal_voicings[first_valid_chord_idx] = first_chord_voicings_list[0]
-
-    # Iterate through the rest of the chords
-    for i in range(first_valid_chord_idx + 1, len(parsed_chords)):
-        current_voicing_option = actual_voicings_for_progression[i]
+        return [None] * len(parsed_chords)
         
-        if not current_voicing_option:
-            print(f"Warning: Chord {parsed_chords[i]['name']} not found in library. Skipping.")
-            dp.append(dp[-1])
-            paths.append(paths[-1])
-            continue
-
-        # Find the last valid previous chord to calculate transition cost
-        prev_valid_idx = i - 1
-        while prev_valid_idx >= first_valid_chord_idx and not actual_voicings_for_progression[prev_valid_idx]:
-            prev_valid_idx -= 1
+    dp = [] # dp[step][j] = (min_cost, prev_j)
+    
+    # Initialize first valid chord
+    first_idx = valid_indices[0]
+    dp.append([(0, None) for _ in all_voicing_options[first_idx]])
+    
+    for step in range(1, len(valid_indices)):
+        prev_idx = valid_indices[step - 1]
+        curr_idx = valid_indices[step]
         
-        if prev_valid_idx < first_valid_chord_idx: # Should not happen if first_valid_chord_idx is set
-            # This means all previous chords were invalid, so we just take the current one with 0 cost
-            current_dp_row = [(0, None)]
-            current_paths_row = [[0]]
-        else:
-            prev_voicing_option = actual_voicings_for_progression[prev_valid_idx]
-            
-            current_dp_row = []
-            current_paths_row = []
-
+        prev_options = all_voicing_options[prev_idx]
+        curr_options = all_voicing_options[curr_idx]
+        
+        curr_dp_row = []
+        for j, curr_voicing in enumerate(curr_options):
             min_cost = float('inf')
-            best_prev_idx = -1
-
-            # Since we only have one voicing per chord for now, k will always be 0
-            transition_cost = calculate_transition_cost(prev_voicing_option, current_voicing_option)
-            total_cost = dp[-1][0][0] + transition_cost
-
-            if total_cost < min_cost:
-                min_cost = total_cost
-                best_prev_idx = 0 # Index within the single-element prev_voicing_option list
+            best_prev_j = -1
             
-            current_dp_row.append((min_cost, best_prev_idx))
-            current_paths_row.append(paths[-1][best_prev_idx] + [0]) # 0 because only one voicing option
+            for prev_j, prev_voicing in enumerate(prev_options):
+                transition_cost = calculate_transition_cost(prev_voicing, curr_voicing)
+                total_cost = dp[step - 1][prev_j][0] + transition_cost
+                
+                if total_cost < min_cost:
+                    min_cost = total_cost
+                    best_prev_j = prev_j
+                    
+            curr_dp_row.append((min_cost, best_prev_j))
+            
+        dp.append(curr_dp_row)
         
-        dp.append(current_dp_row)
-        paths.append(current_paths_row)
-        optimal_voicings[i] = current_voicing_option
-
-    # Find the overall minimum cost path in the last row
-    if dp and dp[-1]:
-        last_row_costs = [item[0] for item in dp[-1]]
-        min_total_cost = float('inf')
-        best_last_voicing_idx = -1
-
-        for idx, cost in enumerate(last_row_costs):
-            if cost < min_total_cost:
-                min_total_cost = cost
-                best_last_voicing_idx = idx
-
-        if best_last_voicing_idx != -1:
-            print(f"Optimal Total Cost: {min_total_cost}")
-
+    # Backtrack to find the optimal path
+    optimal_path_indices = []
+    
+    # Find minimum cost in the last step
+    min_total_cost = float('inf')
+    best_last_j = -1
+    for j, (cost, _) in enumerate(dp[-1]):
+        if cost < min_total_cost:
+            min_total_cost = cost
+            best_last_j = j
+            
+    print(f"Optimal Total Cost: {min_total_cost}")
+    
+    curr_j = best_last_j
+    for step in range(len(valid_indices) - 1, -1, -1):
+        optimal_path_indices.append(curr_j)
+        if step > 0:
+            curr_j = dp[step][curr_j][1]
+            
+    optimal_path_indices.reverse()
+    
+    # Map back to the original array
+    optimal_voicings = [None] * len(parsed_chords)
+    for step, orig_idx in enumerate(valid_indices):
+        chosen_j = optimal_path_indices[step]
+        optimal_voicings[orig_idx] = all_voicing_options[orig_idx][chosen_j]
+        
     return optimal_voicings
