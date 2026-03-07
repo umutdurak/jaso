@@ -187,22 +187,8 @@ def generate_tablature(melody_events, parsed_chords, sections, optimal_chord_voi
         if any(c != ' ' and c != '|' for c in line_lyrics[8:]):
              output_lines.append(line_lyrics + "|")
 
-    # --- Chord Diagrams ---
-    chord_diagrams = "\n--- Chord Voicing Details ---\n"
-    for i, voicing in enumerate(optimal_chord_voicings):
-        if voicing:
-            chord_diagrams += f"\nChord {i+1} ({parsed_chords[i]['name']})\n"
-            for j, s_name in enumerate(ordered_strings):
-                fret = voicing['frets'][j]
-                fret_str = str(fret) if fret != -1 else 'x'
-                # Format to look like a clean vertical box: E |---7---|
-                # We pad the fret number to always take 2 spaces so things align 
-                fret_padded = fret_str.ljust(2, '-')
-                chord_diagrams += f"{s_name.upper()} |---{fret_padded}---|\n"
-
     # --- Write to File ---
     with open(output_file, 'w') as f:
         f.write("\n".join(output_lines))
-        f.write(chord_diagrams)
 
     print(f"Tablature generated and saved to {output_file}")
