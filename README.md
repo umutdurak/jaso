@@ -1,17 +1,17 @@
 # Jaso (Jazz Songs)
 
-Jaso is a Python-based command-line tool designed to assist musicians in creating guitar tablature for jazz standards. It takes a LilyPond music notation file as input, analyzes its melody and chord progression, and then generates optimized guitar tablature for both the melody and the chords, prioritizing ease of playing.
+Jaso is a Python-based command-line tool designed to assist musicians in creating guitar tablature for jazz standards. It takes a MusicXML music notation file as input, analyzes its melody and chord progression, and then generates optimized guitar tablature for both the melody and the chords, prioritizing ease of playing.
 
 ## Features
 
--   **LilyPond Parsing:** Reads and extracts musical information (melody notes, chord symbols) from LilyPond (`.ly`) files.
+-   **MusicXML Parsing:** Reads and extracts musical information (melody notes, chord symbols) from MusicXML (`.musicxml`, `.xml`, `.mxl`) files.
 -   **Chord Library Integration:** Utilizes a comprehensive JSON-based library of guitar chord voicings.
 -   **Optimal Chord Progression:** Employs a dynamic programming algorithm to select the most "easy-to-play" sequence of chord voicings based on minimizing fret-hand movement.
 -   **Tablature Generation:** Outputs a basic text-based tablature for the melody and the optimized chord progression.
 
 ## Development Process
 
-This entire repository and its codebase were developed exclusively with **vibe coding using Gemini**. Every line of code, every file, and every command executed was generated and guided by the Gemini AI model in an interactive command-line environment.
+This entire repository and its codebase were developed exclusively with **vibe coding**. Initially, the project was built using GeminiCLI, but it is now developed using Antigravity with Gemini 3.1. Every line of code, every file, and every command executed was generated and guided by the AI in an interactive command-line environment.
 
 ## Getting Started
 
@@ -31,23 +31,24 @@ This entire repository and its codebase were developed exclusively with **vibe c
     ```bash
     pip install -r requirements.txt
     ```
-    *Note: While `music21` is a dependency, the current LilyPond parsing relies on a regex-based approach due to external LilyPond executable issues. Future versions might re-integrate `music21`'s full capabilities if the LilyPond environment is stable.*
 
 ### Usage
 
-To generate tablature, run the `main.py` script with your LilyPond file, chord library, and desired output file:
+To generate tablature, run the `main.py` script with your MusicXML file, choose your chord flavor, and specify your desired output file:
 
 ```bash
-python3 main.py <path_to_your_lilypond_file.ly> <path_to_your_chords_json_file.json> <output_tablature_file.txt>
+python3 main.py --flavor <classical|freddie|gypsy> <path_to_your_musicxml_file.musicxml> <output_tablature_file.txt>
 ```
 
 **Example:**
 
 ```bash
-python3 main.py sample.ly chords.json output.txt
+python3 main.py --flavor gypsy sample.musicxml output.txt
 ```
 
-This will generate `output.txt` in the current directory with the tablature.
+This will generate `output.txt` in the current directory with the tablature using the Gypsy Jazz playing style simplifications and voicings.
+
+*Note: For backward compatibility, you can still pass an explicit chords `.json` file in place of the `--flavor` and output file sequence.*
 
 ## License
 

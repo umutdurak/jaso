@@ -1,0 +1,17 @@
+{
+    "substitutions": [
+        {
+            "original_quality": "Minor 7",
+            "substituted_quality": "Minor 6"
+        },
+        {
+            "original_quality": "Minor",
+            "substituted_quality": "Minor 6"
+        },
+        {
+            "original_quality": "Minor 7 Flat 5",
+            "substituted_quality": "Minor 6",
+            "root_offset": 3
+        }
+    ]
+}

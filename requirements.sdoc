@@ -18,7 +18,7 @@ ELEMENTS:
 [SECTION, TITLE: Overview]
 [REQUIREMENT, ID: REQ-JASO-001, TITLE: Core Functionality]
 STATEMENT:
-The system, named Jaso, shall read jazz standards specified in LilyPond format, and generate guitar tablature for the melody and an optimized chord progression.
+The system, named Jaso, shall read jazz standards specified in MusicXML format, and generate guitar tablature for the melody and an optimized chord progression.
 
 RATIONALE:
 To provide musicians with an easy-to-play arrangement of jazz standards, minimizing difficult fingering transitions.
@@ -26,15 +26,16 @@ To provide musicians with an easy-to-play arrangement of jazz standards, minimiz
 [/SECTION]
 
 [SECTION, TITLE: Input Formats]
-[REQUIREMENT, ID: REQ-JASO-002, TITLE: LilyPond Input]
+[REQUIREMENT, ID: REQ-JASO-002, TITLE: MusicXML Input]
 STATEMENT:
-The system shall accept a file in LilyPond format (.ly) as the primary input for the musical piece.
+The system shall accept a file in MusicXML format (.musicxml, .xml, .mxl) as the primary input for the musical piece.
 It must parse:
 1. The melody line, including notes and rhythms.
-2. The chord symbols and their durations.
+2. The chord symbols and their exact `.offset` start times.
+3. Lyrics and Rehearsal Marks (song sections), if available.
 
 COMMENT:
-We will need a robust LilyPond parsing library or a custom parser to extract the musical information accurately.
+We will use the music21 library to extract the musical information and specific object properties accurately.
 [/REQUIREMENT]
 
 [REQUIREMENT, ID: REQ-JASO-003, TITLE: Chord Shapes Input]
@@ -43,10 +44,11 @@ The system shall load a library of possible chord shapes (voicings) from a JSON 
 Each entry in the JSON file should define:
 1. The chord name (e.g., "Cmaj7", "G7b9").
 2. A list of possible fingerings (voicings) for that chord.
-3. Each voicing must specify the fret and string for each note.
+3. Each voicing must specify relative fret positions and define a string root. The system must dynamically compute absolute frets from these values based on the `jach` specification.
+4. An optional `substitutions_[flavor].json` file defining an override matrix for chord names and qualities (e.g., simplifying complex extensions or replacing a `m7` with an `m6`).
 
 RATIONALE:
-This provides a flexible way to define the universe of possible chords the system can choose from.
+This guarantees compatibility with the `jach` chord format and provides a flexible way to define the universe of possible chords the system can choose from. Providing a JSON substitution matrix allows users to force specific jazz style harmonic simplifications (like Freddie Green shell voicings) before the optimization engine selects fingerings.
 [/REQUIREMENT]
 [/SECTION]
 
@@ -61,30 +63,43 @@ The primary cost function will be the sum of the fret distances that each finger
 
 [REQUIREMENT, ID: REQ-JASO-005, TITLE: Optimal Chord Progression Algorithm]
 STATEMENT:
-Given a sequence of chord symbols from the LilyPond file, the system shall use the "ease of playing" metric to find the sequence of chord voicings from the JSON library that has the lowest total transition cost.
+Given a sequence of chord symbols from the MusicXML file, the system shall use the "ease of playing" metric to find the sequence of chord voicings from the JSON library that has the lowest total transition cost.
 
 RATIONALE:
 This is the core optimization problem. An algorithm like Viterbi or another dynamic programming approach is likely suitable here to find the "path of least resistance" through the possible voicings.
 [/REQUIREMENT]
+
+[REQUIREMENT, ID: REQ-JASO-006, TITLE: Playing Style Substitutions]
+STATEMENT:
+The system shall apply style-specific chord substitutions when standard jazz flavors are selected, governed by the `substitutions_[flavor].json` matrices:
+1. For Gypsy Jazz (`gypsy`): The system shall substitute generic "Minor" and "Minor 7" chords with "Minor 6" to reflect the genre's characteristic diminished sound.
+2. For Freddie Green (`freddie`): The system shall simplify "Minor 7" to "Minor" (due to omitted 5ths), and substitute "Dominant 7" chords with "Minor 7" chords rooted a perfect fifth higher to create smooth voice leading.
+
+RATIONALE:
+By defining mapping matrices, the system can automatically resolve generic MusicXML chords into authentic genre-specific simplifications before passing them to the optimization algorithm, preserving historical playing traditions without requiring manual user edits.
+[/REQUIREMENT]
 [/SECTION]
 
 [SECTION, TITLE: Output]
-[REQUIREMENT, ID: REQ-JASO-006, TITLE: Tablature Generation]
+[REQUIREMENT, ID: REQ-JASO-007, TITLE: Tablature Generation]
 STATEMENT:
 The system shall generate a single output file containing:
-1. The melody line in standard guitar tablature.
-2. The selected optimal chord voicings displayed in a clear, readable format (e.g., chord diagrams or tablature) aligned with the melody.
+1. The melody line and selected chords placed on a standard guitar tablature timeline grid.
+2. The tablature grid must reflect a 1/8th note resolution spacing separated by explicit standard measure bars (|).
+3. Parsed song section markers rendered above the tabulation measures, and parsed lyrics printed below the lowest guitar string.
+4. An appended legend of vertical chord diagrams corresponding to the selected optimal chord voicings.
 [/REQUIREMENT]
 [/SECTION]
 
 [SECTION, TITLE: Non-Functional Requirements]
-[REQUIREMENT, ID: REQ-JASO-007, TITLE: Command-Line Interface]
+[REQUIREMENT, ID: REQ-JASO-008, TITLE: Command-Line Interface]
 STATEMENT:
 The system shall be executable as a Python script from the command line.
 It should accept arguments for:
-1. The input LilyPond file path.
-2. The input chord shapes JSON file path.
-3. The output tablature file path.
+1. The input MusicXML file path.
+2. The output tablature file path.
+3. An optional `--flavor` argument to select the style of chord voicings (e.g., classical, freddie, gypsy).
+4. Backward compatibility allowing an explicit JSON chords file to be passed instead of a flavor.
 [/REQUIREMENT]
 [/SECTION]
 [/DOCUMENT]
