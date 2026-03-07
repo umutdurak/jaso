@@ -1,5 +1,28 @@
 import re
 
+def get_melody_fingering(note_name):
+    # Simple mapping of note names (e.g., 'C4', 'G#5') to guitar strings/frets
+    # prioritizing higher strings (e, B, G) for melody.
+    
+    # 0: 'e', 1: 'B', 2: 'G', 3: 'D', 4: 'A', 5: 'E'
+    string_notes = [64, 59, 55, 50, 45, 40] 
+    
+    # Map note name to MIDI number
+    from music21 import pitch
+    try:
+        p = pitch.Pitch(note_name)
+        midi = p.ps
+    except:
+        return None
+        
+    # Find the first string where this note can be played (fret <= 15)
+    for i, open_midi in enumerate(string_notes):
+        fret = int(midi - open_midi)
+        if 0 <= fret <= 15:
+            return i, fret
+            
+    return None
+
 def generate_tablature(melody_events, parsed_chords, sections, optimal_chord_voicings, output_file):
     # Generates the tablature and writes it to the output file.
 
@@ -29,9 +52,21 @@ def generate_tablature(melody_events, parsed_chords, sections, optimal_chord_voi
                 'voicing': optimal_chord_voicings[i]
             })
 
-    # Add lyrics to timeline from melody_events
+    # Add melody events to timeline
     if melody_events:
         for event in melody_events:
+            if event['type'] == 'note':
+                fingering = get_melody_fingering(event['name'])
+                if fingering:
+                    timeline.append({
+                        'time': event['time'],
+                        'type': 'melody_note',
+                        'name': event['name'],
+                        'duration': event['duration'],
+                        'string_idx': fingering[0],
+                        'fret': fingering[1]
+                    })
+            
             if event.get('lyric'):
                 timeline.append({
                     'time': event['time'],
@@ -73,8 +108,10 @@ def generate_tablature(melody_events, parsed_chords, sections, optimal_chord_voi
         line_end_measure = min(line_start_measure + MEASURES_PER_LINE, num_measures)
         
         line_section = ""
-        line_chords = "Chords: "
-        line_tab = {s: f"{s.upper()}:    " for s in ordered_strings}
+        line_chords_label = "Chords: "
+        line_chord_tab = {s: f"{s.upper()}:    " for s in ordered_strings}
+        
+        line_melody_tab = {s: f"{s.upper()}:    " for s in ordered_strings}
         line_lyrics = "Lyrics: "
 
         for m in range(line_start_measure, line_end_measure):
@@ -82,54 +119,71 @@ def generate_tablature(melody_events, parsed_chords, sections, optimal_chord_voi
             measure_end_time = (m + 1) * BEATS_PER_MEASURE
             measure_width = CHAR_PER_QUARTER_NOTE * BEATS_PER_MEASURE
 
-            measure_tab_grid = {s: ['-'] * measure_width for s in ordered_strings}
-            measure_chords_grid = [' '] * measure_width
-            measure_lyrics_grid = [' '] * measure_width
+            # Grids for this specific measure
+            m_chord_grid = {s: ['-'] * measure_width for s in ordered_strings}
+            m_chord_names = [' '] * measure_width
             
-            # Print sections
-            for event in timeline:
-                if event['type'] == 'section' and measure_start_time <= event['time'] < measure_end_time:
-                    line_section += f"[{event['name']}] "
-                    
+            m_melody_grid = {s: ['-'] * measure_width for s in ordered_strings}
+            m_lyrics_grid = [' '] * measure_width
+            
+            # Populate grids with events
             for event in timeline:
                 if measure_start_time <= event['time'] < measure_end_time:
                     pos = int((event['time'] - measure_start_time) * CHAR_PER_QUARTER_NOTE)
                     
-                    if event['type'] == 'chord':
-                        chord_name = event['name']
-                        for i, char in enumerate(chord_name):
+                    if event['type'] == 'section':
+                        line_section += f"[{event['name']}] "
+                    
+                    elif event['type'] == 'chord':
+                        # Chord name above its staff
+                        for i, char in enumerate(event['name']):
                             if pos + i < measure_width:
-                                measure_chords_grid[pos + i] = char
-
+                                m_chord_names[pos + i] = char
+                        # Chord voicing on its staff
                         voicing = event['voicing']
                         for i, s_name in enumerate(ordered_strings):
                             fret = voicing['frets'][i]
-                            fret_str = str(fret) if fret != -1 else 'x'
-                            
-                            # Insert the fret string character by character 
-                            for char_idx, char in enumerate(fret_str):
+                            fret_char = str(fret) if fret != -1 else 'x'
+                            for char_idx, char in enumerate(fret_char):
                                 if pos + char_idx < measure_width:
-                                    measure_tab_grid[s_name][pos + char_idx] = char
-                                    
+                                    m_chord_grid[s_name][pos + char_idx] = char
+
+                    elif event['type'] == 'melody_note':
+                        # Melody fret on its staff
+                        s_idx = event['string_idx']
+                        s_name = ordered_strings[s_idx]
+                        fret_str = str(event['fret'])
+                        for char_idx, char in enumerate(fret_str):
+                            if pos + char_idx < measure_width:
+                                m_melody_grid[s_name][pos + char_idx] = char
+
                     elif event['type'] == 'lyric':
                         lyric_text = event['text']
                         for i, char in enumerate(lyric_text):
                             if pos + i < measure_width:
-                                measure_lyrics_grid[pos + i] = char
+                                m_lyrics_grid[pos + i] = char
 
-            line_chords += "|" + "".join(measure_chords_grid)
+            # Append measure grids to line strings
+            line_chords_label += "|" + "".join(m_chord_names)
             for s in ordered_strings:
-                line_tab[s] += "|" + "".join(measure_tab_grid[s])
-            line_lyrics += "|" + "".join(measure_lyrics_grid)
+                line_chord_tab[s] += "|" + "".join(m_chord_grid[s])
+                line_melody_tab[s] += "|" + "".join(m_melody_grid[s])
+            line_lyrics += "|" + "".join(m_lyrics_grid)
 
+        # Build final output block
         output_lines.append("")
         if line_section.strip():
             output_lines.append("        " + line_section.strip())
-        output_lines.append(line_chords + "|")
-        for s in ordered_strings:
-            output_lines.append(line_tab[s] + "|")
             
-        # Only print lyrics if there are actual lyrics present in this line
+        output_lines.append("--- Chords (Accompaniment) ---")
+        output_lines.append(line_chords_label + "|")
+        for s in ordered_strings:
+            output_lines.append(line_chord_tab[s] + "|")
+            
+        output_lines.append("--- Melody (Lead) ---")
+        for s in ordered_strings:
+            output_lines.append(line_melody_tab[s] + "|")
+            
         if any(c != ' ' and c != '|' for c in line_lyrics[8:]):
              output_lines.append(line_lyrics + "|")
 
