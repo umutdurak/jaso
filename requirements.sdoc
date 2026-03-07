@@ -69,6 +69,14 @@ RATIONALE:
 This is the core optimization problem. An algorithm like Viterbi or another dynamic programming approach is likely suitable here to find the "path of least resistance" through the possible voicings.
 [/REQUIREMENT]
 
+[REQUIREMENT, ID: REQ-JASO-009, TITLE: Smart Melody Optimization]
+STATEMENT:
+The system shall calculate the optimal sequence of string/fret positions for the melody line using a Viterbi search that minimizes the total distance (fret and string jumps) between consecutive notes.
+
+RATIONALE:
+To prevent the melody lead line from jumping wildly across the fretboard and ensure it remains in a playable "position" or "box" consistent with the ease-of-play metric.
+[/REQUIREMENT]
+
 [REQUIREMENT, ID: REQ-JASO-006, TITLE: Playing Style Substitutions]
 STATEMENT:
 The system shall apply style-specific chord substitutions when standard jazz flavors are selected, governed by the `substitutions_[flavor].json` matrices:
@@ -84,10 +92,12 @@ By defining mapping matrices, the system can automatically resolve generic Music
 [REQUIREMENT, ID: REQ-JASO-007, TITLE: Tablature Generation]
 STATEMENT:
 The system shall generate a single output file containing:
-1. The melody line and selected chords placed on a standard guitar tablature timeline grid.
-2. The tablature grid must reflect a 1/8th note resolution spacing separated by explicit standard measure bars (|).
-3. Parsed song section markers rendered above the tabulation measures, and parsed lyrics printed below the lowest guitar string.
-4. An appended legend of vertical chord diagrams corresponding to the selected optimal chord voicings.
+1. A "Dual-Staff" layout where Accompaniment (Chords) and Lead (Melody) are rendered in separate, vertically aligned 6-string grids.
+2. The tablature grids must reflect a fixed 1/8th note resolution spacing separated by explicit standard measure bars (|).
+3. Parsed song section markers rendered above the accompaniment measures, and parsed lyrics printed below the Lead staff.
+
+RATIONALE:
+Providing a dual-staff layout ensures clarity between the rhythm and lead parts while maintaining a synchronized rhythmic timeline for practice.
 [/REQUIREMENT]
 [/SECTION]
 

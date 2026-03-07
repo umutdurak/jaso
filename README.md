@@ -4,10 +4,11 @@ Jaso is a Python-based command-line tool designed to assist musicians in creatin
 
 ## Features
 
--   **MusicXML Parsing:** Reads and extracts musical information (melody notes, chord symbols) from MusicXML (`.musicxml`, `.xml`, `.mxl`) files.
--   **Chord Library Integration:** Utilizes a comprehensive JSON-based library of guitar chord voicings.
--   **Optimal Chord Progression:** Employs a dynamic programming algorithm to select the most "easy-to-play" sequence of chord voicings based on minimizing fret-hand movement.
--   **Tablature Generation:** Outputs a basic text-based tablature for the melody and the optimized chord progression.
+-   **MusicXML Parsing:** Reads and extracts musical information (melody notes, chord symbols, lyrics, and rehearsal marks) from MusicXML (`.musicxml`, `.xml`, `.mxl`) files.
+-   **Chord Library Integration:** Utilizes a comprehensive JSON-based library of guitar chord voicings with style-specific "flavors" (Classical, Freddie Green, Gypsy Jazz).
+-   **Dual-Staff Tablature:** Generates a professional "Dual-Staff" layout, separating the **Accompaniment (Chords)** and the **Lead (Melody)** into two vertically aligned rhythmic grids.
+-   **Smart Optimization:** Employs a Viterbi dynamic programming algorithm to find the absolute easiest sequence of both chord voicings and melody fingerings, minimizing fretboard hand movement.
+-   **Rhythmic Alignment:** Features a fixed 1/8th note width grid with explicit measure bars (`|`), section markers (`[A]`), and synchronized lyrics.
 
 ## Development Process
 
