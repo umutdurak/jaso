@@ -1,33 +1,15 @@
 import re
-
-def get_melody_fingering(note_name):
-    # Simple mapping of note names (e.g., 'C4', 'G#5') to guitar strings/frets
-    # prioritizing higher strings (e, B, G) for melody.
-    
-    # 0: 'e', 1: 'B', 2: 'G', 3: 'D', 4: 'A', 5: 'E'
-    string_notes = [64, 59, 55, 50, 45, 40] 
-    
-    # Map note name to MIDI number
-    from music21 import pitch
-    try:
-        p = pitch.Pitch(note_name)
-        midi = p.ps
-    except:
-        return None
-        
-    # Find the first string where this note can be played (fret <= 15)
-    for i, open_midi in enumerate(string_notes):
-        fret = int(midi - open_midi)
-        if 0 <= fret <= 15:
-            return i, fret
-            
-    return None
+from .optimizer import find_optimal_melody_path
 
 def generate_tablature(melody_events, parsed_chords, sections, optimal_chord_voicings, output_file):
     # Generates the tablature and writes it to the output file.
 
     ordered_strings = ['e', 'B', 'G', 'D', 'A', 'E']
 
+    # --- Melody Optimization ---
+    # Find the most playable path for the melody notes
+    optimal_melody_fingerings = find_optimal_melody_path(melody_events)
+    
     # --- Timeline Creation ---
     timeline = []
     
@@ -54,18 +36,20 @@ def generate_tablature(melody_events, parsed_chords, sections, optimal_chord_voi
 
     # Add melody events to timeline
     if melody_events:
+        note_idx = 0
         for event in melody_events:
             if event['type'] == 'note':
-                fingering = get_melody_fingering(event['name'])
+                fingering = optimal_melody_fingerings[note_idx] if note_idx < len(optimal_melody_fingerings) else None
                 if fingering:
                     timeline.append({
                         'time': event['time'],
                         'type': 'melody_note',
                         'name': event['name'],
                         'duration': event['duration'],
-                        'string_idx': fingering[0],
-                        'fret': fingering[1]
+                        'string_idx': fingering['string_idx'],
+                        'fret': fingering['fret']
                     })
+                note_idx += 1
             
             if event.get('lyric'):
                 timeline.append({
