@@ -18,7 +18,7 @@ ELEMENTS:
 [SECTION, TITLE: Overview]
 [REQUIREMENT, ID: REQ-JASO-001, TITLE: Core Functionality]
 STATEMENT:
-The system, named Jaso, shall read jazz standards specified in MusicXML format, and generate guitar tablature for the melody and an optimized chord progression.
+The system, named Jaso, shall read jazz standards specified in MusicXML or LilyPond format, and generate guitar tablature for the melody and an optimized chord progression.
 
 RATIONALE:
 To provide musicians with an easy-to-play arrangement of jazz standards, minimizing difficult fingering transitions.
@@ -26,9 +26,9 @@ To provide musicians with an easy-to-play arrangement of jazz standards, minimiz
 [/SECTION]
 
 [SECTION, TITLE: Input Formats]
-[REQUIREMENT, ID: REQ-JASO-002, TITLE: MusicXML Input]
+[REQUIREMENT, ID: REQ-JASO-002, TITLE: Score Input Formats]
 STATEMENT:
-The system shall accept a file in MusicXML format (.musicxml, .xml, .mxl) as the primary input for the musical piece.
+The system shall accept files in MusicXML format (.musicxml, .xml, .mxl) or LilyPond format (.ly) as input for the musical piece.
 It must parse:
 1. The melody line, including notes and rhythms.
 2. The chord symbols and their exact `.offset` start times.
@@ -106,7 +106,7 @@ Providing a dual-staff layout ensures clarity between the rhythm and lead parts 
 STATEMENT:
 The system shall be executable as a Python script from the command line.
 It should accept arguments for:
-1. The input MusicXML file path.
+1. The input score file path (MusicXML or LilyPond).
 2. The output tablature file path.
 3. An optional `--flavor` argument to select the style of chord voicings (e.g., classical, freddie, gypsy).
 4. Backward compatibility allowing an explicit JSON chords file to be passed instead of a flavor.

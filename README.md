@@ -4,7 +4,7 @@ Jaso is a Python-based command-line tool designed to assist musicians in creatin
 
 ## Features
 
--   **MusicXML Parsing:** Reads and extracts musical information (melody notes, chord symbols, lyrics, and rehearsal marks) from MusicXML (`.musicxml`, `.xml`, `.mxl`) files.
+-   **Score Parsing:** Reads and extracts musical information (melody notes, chord symbols, lyrics, and rehearsal marks) from **MusicXML** (`.musicxml`, `.xml`, `.mxl`) and **LilyPond** (`.ly`) files.
 -   **Chord Library Integration:** Utilizes a comprehensive JSON-based library of guitar chord voicings with style-specific "flavors" (Classical, Freddie Green, Gypsy Jazz).
 -   **Dual-Staff Tablature:** Generates a professional "Dual-Staff" layout, separating the **Accompaniment (Chords)** and the **Lead (Melody)** into two vertically aligned rhythmic grids.
 -   **Smart Optimization:** Employs a Viterbi dynamic programming algorithm to find the absolute easiest sequence of both chord voicings and melody fingerings, minimizing fretboard hand movement.
@@ -35,16 +35,16 @@ This entire repository and its codebase were developed exclusively with **vibe c
 
 ### Usage
 
-To generate tablature, run the `main.py` script with your MusicXML file, choose your chord flavor, and specify your desired output file:
+To generate tablature, run the `main.py` script with your MusicXML or LilyPond file, choose your chord flavor, and specify your desired output file:
 
 ```bash
-python3 main.py --flavor <classical|freddie|gypsy> <path_to_your_musicxml_file.musicxml> <output_tablature_file.txt>
+python3 main.py --flavor <classical|freddie|gypsy> <path_to_score_file> <output_tablature_file.txt>
 ```
 
 **Example:**
 
 ```bash
-python3 main.py --flavor gypsy sample.musicxml output.txt
+python3 main.py --flavor gypsy songs/doxy.ly output.txt
 ```
 
 This will generate `output.txt` in the current directory with the tablature using the Gypsy Jazz playing style simplifications and voicings.
