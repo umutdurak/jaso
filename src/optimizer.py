@@ -1,12 +1,15 @@
 import math
 import json
+from music21 import pitch
 
 def calculate_transition_cost(voicing1, voicing2):
-    # Calculates the cost of transitioning between two chord voicings.
-    # The cost is the sum of the distances each finger travels.
+    """
+    Calculates the cost of transitioning between two chord voicings.
+    The cost is the sum of the distances each finger travels on the fretboard.
 
-    # Assumes voicings are dictionaries with a 'frets' key.
-    # A value of -1 or 'x' can represent a muted string.
+    Assumes voicings are dictionaries with a 'frets' key.
+    A value of -1 can represent a muted string.
+    """
     cost = 0
     for fret1, fret2 in zip(voicing1['frets'], voicing2['frets']):
         # Ignore muted strings in the calculation
@@ -15,8 +18,10 @@ def calculate_transition_cost(voicing1, voicing2):
     return cost
 
 def find_optimal_progression(parsed_chords, chord_library_instance):
-    # This function finds the optimal chord progression.
-    # It uses a dynamic programming approach (Viterbi algorithm).
+    """
+    Finds the optimal chord progression using a dynamic programming approach (Viterbi target).
+    Minimizes the total fretboard transition cost across the song.
+    """
 
     print("\n--- Optimization Process ---")
 
@@ -94,6 +99,7 @@ def find_optimal_progression(parsed_chords, chord_library_instance):
     return optimal_voicings
 
 def get_all_note_positions(note_name, instrument_config=None):
+    """Finds all valid (string, fret) positions for a given pitch on the instrument."""
     if instrument_config is None:
         with open("instrument_guitar_standard.json", "r") as f:
             instrument_config = json.load(f)
@@ -103,11 +109,10 @@ def get_all_note_positions(note_name, instrument_config=None):
     string_order = instrument_config.get("string_order", ["e", "B", "G", "D", "A", "E"])
     string_notes = [open_string_midi.get(s, 0) for s in string_order]
     
-    from music21 import pitch
     try:
         p = pitch.Pitch(note_name)
         midi = p.ps
-    except:
+    except pitch.PitchException:
         return []
         
     positions = []
@@ -134,6 +139,10 @@ def calculate_melody_transition_cost(pos1, pos2, app_config=None):
     return (fret_dist * fret_weight) + (string_dist * string_weight)
 
 def find_optimal_melody_path(melody_events):
+    """
+    Uses Viterbi dynamic programming to find the optimal string/fret fingering 
+    sequence for the melody line, minimizing hand stress.
+    """
     # Load configs once
     with open("app_config.json", "r") as f:
         app_config = json.load(f)

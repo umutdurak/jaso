@@ -1,9 +1,11 @@
-import re
 import json
 from .optimizer import find_optimal_melody_path
 
 def generate_tablature(melody_events, parsed_chords, sections, optimal_chord_voicings, optimal_melody_fingerings, output_file, pickup_length=0.0):
-    # Generates the tablature and writes it to the output file.
+    """
+    Generates a dual-staff ASCII tablature text file from the optimized musical events,
+    aligning melody, chords, and lyrics on a fixed rhythmic grid.
+    """
     
     # Load configuration
     with open("app_config.json", "r") as f:

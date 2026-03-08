@@ -1,6 +1,6 @@
 import json
 import xml.etree.ElementTree as ET
-from music21 import articulations, chord, note, stream, clef, instrument
+from music21 import articulations, chord, note, stream, clef, instrument, meter, key
 
 def export_to_musicxml(score, melody_events, optimal_melody_fingerings, parsed_chords, optimal_chord_voicings, output_xml_path, pickup_length=0.0):
     """
@@ -115,7 +115,6 @@ def export_to_musicxml(score, melody_events, optimal_melody_fingerings, parsed_c
             chord_technical_data[t] = midi_to_tech
 
     # Now build explicit Measure objects
-    from music21 import meter, key
     for idx, (mnum, m_start, m_len) in enumerate(measure_grid):
         m = stream.Measure(number=mnum)
         
@@ -273,7 +272,6 @@ def _inject_chord_technical_tags(part_el, chord_technical_data, tuning_data, mea
     calculate its MIDI pitch and look up the exact (string, fret) from the optimizer's
     data at the matching beat offset.
     """
-    import xml.etree.ElementTree as ET
     
     # String open MIDI values for fallback calculation
     string_open_midi = [64, 59, 55, 50, 45, 40]  # string 1=E4 to 6=E2

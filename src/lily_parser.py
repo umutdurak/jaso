@@ -1,4 +1,5 @@
 import re
+from music21 import pitch
 
 def parse_lilypond_file(file_path):
     """
@@ -155,7 +156,6 @@ def parse_lily_melody(block):
                     best_midi += 12 * octave_mod.count("'")
                     best_midi -= 12 * octave_mod.count(",")
                 
-                from music21 import pitch
                 p = pitch.Pitch()
                 p.ps = best_midi
                 

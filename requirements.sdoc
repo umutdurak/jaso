@@ -116,6 +116,18 @@ The system shall generate a single output file containing:
 RATIONALE:
 Providing a dual-staff layout ensures clarity between the rhythm and lead parts while maintaining a synchronized rhythmic timeline for practice.
 [/REQUIREMENT]
+[REQUIREMENT, ID: REQ-JASO-012, TITLE: MusicXML Export]
+STATEMENT:
+The system shall optionally export the optimized arrangement back into a valid MusicXML file.
+1. The exported file must contain two synchronized parts: the original Melody (P1) and the generated Chord Accompaniment (P2).
+2. The accompaniment part must use explicit `<chord/>` elements to ensure MuseScore groups the notes into a single voice.
+3. The system must inject `<technical>` tags (string and fret numbers) onto the chord notes matching the optimizer's selected voicings.
+4. The system must inject `<staff-details>` and `<staff-tuning>` elements to ensure the accompaniment part is correctly interpreted as standard 6-string guitar tablature by notation software like MuseScore.
+5. All measure lengths, including pickup measures (anacrusis), must align exactly between the melody and accompaniment parts without introducing tied notes across measure boundaries.
+
+RATIONALE:
+To allow users to view, playback, and print the optimized tablature using standard notation software alongside the text-based output.
+[/REQUIREMENT]
 [/SECTION]
 
 [SECTION, TITLE: Non-Functional Requirements]
@@ -124,9 +136,10 @@ STATEMENT:
 The system shall be executable as a Python script from the command line.
 It should accept arguments for:
 1. The input score file path (MusicXML or LilyPond).
-2. The output tablature file path.
+2. The output tablature text file path.
 3. An optional `--flavor` argument to select the style of chord voicings (e.g., classical, freddie, gypsy).
-4. Backward compatibility allowing an explicit JSON chords file to be passed instead of a flavor.
+4. An optional `--xml` argument to specify the output path for the optimized MusicXML file.
+5. Backward compatibility allowing an explicit JSON chords file to be passed instead of a flavor.
 [/REQUIREMENT]
 [/SECTION]
 [/DOCUMENT]

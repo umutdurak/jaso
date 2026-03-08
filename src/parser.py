@@ -13,10 +13,12 @@ def parse_score_file(file_path):
         return parse_musicxml_file(file_path)
 
 def parse_musicxml_file(file_path):
-    # Parses a MusicXML file using music21 and extracts notes and chords.
+    """
+    Parses a MusicXML file using music21 and extracts notes and chords.
 
-    # :param file_path: The absolute path to the .musicxml file.
-    # :return: A tuple containing lists and the score: (melody_events, chord_events, section_events, score).
+    :param file_path: The absolute path to the .musicxml file.
+    :return: A tuple containing (melody_events, chord_events, section_events, score).
+    """
     melody_events = []
     chord_events = []
     section_events = []

@@ -7,6 +7,7 @@ Jaso is a Python-based command-line tool designed to assist musicians in creatin
 -   **Score Parsing:** Reads and extracts musical information (melody notes, chord symbols, lyrics, and rehearsal marks) from **MusicXML** (`.musicxml`, `.xml`, `.mxl`) and **LilyPond** (`.ly`) files.
 -   **Chord Library Integration:** Utilizes a comprehensive JSON-based library of guitar chord voicings with style-specific "flavors" (Classical, Freddie Green, Gypsy Jazz).
 -   **Dual-Staff Tablature:** Generates a professional "Dual-Staff" layout, separating the **Accompaniment (Chords)** and the **Lead (Melody)** into two vertically aligned rhythmic grids.
+-   **MusicXML Export:** Exports the optimized arrangement back into a MusicXML file (`.musicxml`) with full `<technical>` tablature annotations, ready for native playback and rendering in MuseScore 4.
 -   **Smart Optimization:** Employs a Viterbi dynamic programming algorithm to find the absolute easiest sequence of both chord voicings and melody fingerings, minimizing fretboard hand movement.
 -   **Instrument Decoupling:** Supports any stringed instrument (e.g., Ukulele, Banjo, or custom tunings) via external JSON instrument definitions.
 -   **Extensible Configuration:** All layout parameters (CPQN, measures per line), musical defaults, and optimization weights are externalized to JSON.
@@ -45,19 +46,19 @@ This entire repository and its codebase were developed exclusively with **vibe c
 
 ### Usage
 
-To generate tablature, run the `main.py` script with your MusicXML or LilyPond file, choose your chord flavor, and specify your desired output file:
+To generate tablature, run the `main.py` script with your MusicXML or LilyPond file, choose your chord flavor, and specify your desired output text file. You can also optionally export the optimized score back to MusicXML for MuseScore:
 
 ```bash
-python3 main.py --flavor <classical|freddie|gypsy> <path_to_score_file> <output_tablature_file.txt>
+python3 main.py <path_to_score_file> <output_tablature_file.txt> --flavor <classical|freddie|gypsy> [--xml <output_musicxml_file>]
 ```
 
 **Example:**
 
 ```bash
-python3 main.py --flavor gypsy songs/doxy.ly output.txt
+python3 main.py songs/misty.mxl output_misty.txt --flavor freddie --xml output_misty_optimized.musicxml
 ```
 
-This will generate `output.txt` in the current directory with the tablature using the Gypsy Jazz playing style simplifications and voicings.
+This will generate `output_misty.txt` with the text tablature using Freddie Green chord voicings, and also export `output_misty_optimized.musicxml` which can be opened in MuseScore to view and play the synchronized tablature.
 
 *Note: For backward compatibility, you can still pass an explicit chords `.json` file in place of the `--flavor` and output file sequence.*
 

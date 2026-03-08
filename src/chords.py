@@ -2,6 +2,10 @@ import json
 import re
 
 class ChordLibrary:
+    """
+    Manages loading, parsing, and retrieving guitar chord voicings from JSON libraries.
+    Handles chord synonym resolution, style-specific substitutions, and instrument tuning offsets.
+    """
     def __init__(self, file_path, subs_file_path=None):
         self.chord_data = self._load_json_data(file_path)
         
@@ -48,6 +52,10 @@ class ChordLibrary:
             return {}
 
     def _parse_chord_name(self, chord_name):
+        """
+        Parses a raw chord symbol into its root note and standardized quality string.
+        Resolves aliases like '-' to 'm' and handles complex extensions.
+        """
         original_chord_name = chord_name
         
         # 1. Extract the root note (e.g. C, C#, Bb, B-). 
@@ -135,6 +143,11 @@ class ChordLibrary:
         return final_frets
 
     def get_chord_voicings(self, chord_name):
+        """
+        Retrieves all valid fretboard voicings for a given chord symbol.
+        Applies style substitutions (e.g. Freddie Green, Gypsy) and resolves fallbacks
+        if exact extensions are missing from the library.
+        """
         root_note, quality = self._parse_chord_name(chord_name)
         if not root_note or not quality:
             print(f"Warning: Could not parse chord name: {chord_name}")
