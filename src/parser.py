@@ -6,7 +6,8 @@ def parse_score_file(file_path):
     Dispatcher to choose the right parser based on file extension.
     """
     if file_path.endswith('.ly'):
-        return parse_lilypond_file(file_path)
+        melody, chords, sections = parse_lilypond_file(file_path)
+        return melody, chords, sections, None
     else:
         # Default to MusicXML for .mxl, .xml, .musicxml
         return parse_musicxml_file(file_path)
@@ -15,7 +16,7 @@ def parse_musicxml_file(file_path):
     # Parses a MusicXML file using music21 and extracts notes and chords.
 
     # :param file_path: The absolute path to the .musicxml file.
-    # :return: A tuple containing lists: (melody_events, chord_events, section_events).
+    # :return: A tuple containing lists and the score: (melody_events, chord_events, section_events, score).
     melody_events = []
     chord_events = []
     section_events = []
@@ -29,30 +30,60 @@ def parse_musicxml_file(file_path):
             lyric_text = element.lyric if hasattr(element, 'lyric') and element.lyric else None
             
             if isinstance(element, note.Note):
-                melody_events.append({'time': float(element.offset), 'type': 'note', 'name': element.nameWithOctave, 'duration': element.duration.quarterLength, 'lyric': lyric_text})
+                melody_events.append({
+                    'time': float(element.offset), 
+                    'type': 'note', 
+                    'name': element.nameWithOctave, 
+                    'duration': element.duration.quarterLength, 
+                    'lyric': lyric_text,
+                    'obj': element
+                })
             elif isinstance(element, note.Rest):
-                melody_events.append({'time': float(element.offset), 'type': 'rest', 'name': element.name, 'duration': element.duration.quarterLength, 'lyric': lyric_text})
+                melody_events.append({
+                    'time': float(element.offset), 
+                    'type': 'rest', 
+                    'name': element.name, 
+                    'duration': element.duration.quarterLength, 
+                    'lyric': lyric_text,
+                    'obj': element
+                })
             elif isinstance(element, chord.Chord):
                 # This handles melodic chords, not chord symbols
-                melody_events.append({'time': float(element.offset), 'type': 'melodic_chord', 'name': element.pitchedCommonName, 'duration': element.duration.quarterLength, 'lyric': lyric_text})
+                melody_events.append({
+                    'time': float(element.offset), 
+                    'type': 'melodic_chord', 
+                    'name': element.pitchedCommonName, 
+                    'duration': element.duration.quarterLength, 
+                    'lyric': lyric_text,
+                    'obj': element
+                })
 
         # To get chord symbols, we need to find them specifically.
         # They are often in a different part of the stream.
         for element in score.flat.getElementsByClass(harmony.Harmony):
-            chord_events.append({'name': element.figure, 'time': float(element.offset), 'duration': element.duration.quarterLength})
+            chord_events.append({
+                'name': element.figure, 
+                'time': float(element.offset), 
+                'duration': element.duration.quarterLength,
+                'obj': element
+            })
 
         # Find Rehearsal Marks (e.g. A, B, C sections) and Text annotations
         for element in score.flat.getElementsByClass(expressions.RehearsalMark):
-            section_events.append({'name': element.content, 'time': float(element.offset)})
+            section_events.append({
+                'name': element.content, 
+                'time': float(element.offset),
+                'obj': element
+            })
             
         if not melody_events and not chord_events:
             print("Warning: Could not find any notes or chords in the file.")
 
-        return melody_events, chord_events, section_events
+        return melody_events, chord_events, section_events, score
 
     except FileNotFoundError:
         print(f"Error: MusicXML file not found at {file_path}")
-        return None, None, None
+        return None, None, None, None
     except Exception as e:
         print(f"An error occurred with music21 during MusicXML parsing: {e}")
-        return None, None, None
+        return None, None, None, None

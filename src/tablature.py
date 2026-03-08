@@ -2,7 +2,7 @@ import re
 import json
 from .optimizer import find_optimal_melody_path
 
-def generate_tablature(melody_events, parsed_chords, sections, optimal_chord_voicings, output_file):
+def generate_tablature(melody_events, parsed_chords, sections, optimal_chord_voicings, optimal_melody_fingerings, output_file):
     # Generates the tablature and writes it to the output file.
     
     # Load configuration
@@ -19,8 +19,7 @@ def generate_tablature(melody_events, parsed_chords, sections, optimal_chord_voi
     GLOBAL_CPQN = layout_cfg.get("global_cpqn", 12)
 
     # --- Melody Optimization ---
-    # Find the most playable path for the melody notes
-    optimal_melody_fingerings = find_optimal_melody_path(melody_events)
+    # (Now passed from main.py)
     
     # --- Timeline Creation ---
     timeline = []

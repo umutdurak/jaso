@@ -2,8 +2,9 @@ import argparse
 
 from src.parser import parse_score_file
 from src.chords import ChordLibrary
-from src.optimizer import find_optimal_progression
+from src.optimizer import find_optimal_progression, find_optimal_melody_path
 from src.tablature import generate_tablature
+from src.exporter import export_to_musicxml
 
 def main():
     """Main entry point for the Jaso application."""
@@ -12,6 +13,7 @@ def main():
     parser.add_argument('--flavor', type=str, choices=['classical', 'freddie', 'gypsy'], default='classical', help='The jazz playing style flavor to generate chords for (classical, freddie, or gypsy). Default is classical.')
     # Maintain backward compatibility: if they pass a JSON file, we'll try to use it as the flavor
     parser.add_argument('output_file', type=str, help='The path for the output tablature file.')
+    parser.add_argument('--xml', type=str, help='Optional path to export optimized MusicXML for MuseScore.')
     
     # Optional fallback for old usage taking positional JSON
     parser.add_argument('legacy_chords_file', type=str, nargs='?', default=None, help=argparse.SUPPRESS)
@@ -37,7 +39,7 @@ def main():
     print(f"Output file: {actual_output}")
 
     # 1. Parse the input score (MusicXML or LilyPond)
-    melody, chords, sections = parse_score_file(args.musicxml_file)
+    melody, chords, sections, score = parse_score_file(args.musicxml_file)
     if melody or chords or sections:
         print("--- Parsed Melody Events (Structured) ---")
         for event in melody:
@@ -60,8 +62,15 @@ def main():
     # 3. Find the optimal chord progression
     optimal_progression = find_optimal_progression(chords, chord_library_instance)
 
-    # 4. Generate the tablature
-    generate_tablature(melody, chords, sections, optimal_progression, actual_output)
+    # 4. Find the optimal melody path
+    optimal_melody_fingerings = find_optimal_melody_path(melody)
+
+    # 5. Generate the text tablature
+    generate_tablature(melody, chords, sections, optimal_progression, optimal_melody_fingerings, actual_output)
+
+    # 6. Export to MusicXML if requested
+    if args.xml:
+        export_to_musicxml(score, melody, optimal_melody_fingerings, chords, optimal_progression, args.xml)
 
 if __name__ == '__main__':
     main()
