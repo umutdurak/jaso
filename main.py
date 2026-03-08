@@ -65,12 +65,19 @@ def main():
     # 4. Find the optimal melody path
     optimal_melody_fingerings = find_optimal_melody_path(melody)
 
-    # 5. Generate the text tablature
-    generate_tablature(melody, chords, sections, optimal_progression, optimal_melody_fingerings, actual_output)
+    # 5. Determine pickup measure length from the score
+    pickup_length = 0.0
+    if score and score.parts:
+        first_measure = score.parts[0].getElementsByClass('Measure')[0]
+        if first_measure.quarterLength < 4.0:  # shorter than a full measure = pickup
+            pickup_length = first_measure.quarterLength
 
-    # 6. Export to MusicXML if requested
+    # 6. Generate the text tablature
+    generate_tablature(melody, chords, sections, optimal_progression, optimal_melody_fingerings, actual_output, pickup_length)
+
+    # 7. Export to MusicXML if requested
     if args.xml:
-        export_to_musicxml(score, melody, optimal_melody_fingerings, chords, optimal_progression, args.xml)
+        export_to_musicxml(score, melody, optimal_melody_fingerings, chords, optimal_progression, args.xml, pickup_length)
 
 if __name__ == '__main__':
     main()

@@ -2,7 +2,7 @@ import json
 import xml.etree.ElementTree as ET
 from music21 import articulations, chord, note, stream, clef, instrument
 
-def export_to_musicxml(score, melody_events, optimal_melody_fingerings, parsed_chords, optimal_chord_voicings, output_xml_path):
+def export_to_musicxml(score, melody_events, optimal_melody_fingerings, parsed_chords, optimal_chord_voicings, output_xml_path, pickup_length=0.0):
     """
     Exports the optimized arrangement back to a MusicXML file with technical markings.
     """
@@ -46,68 +46,114 @@ def export_to_musicxml(score, melody_events, optimal_melody_fingerings, parsed_c
             i_obj.midiProgram = 25  # Steel String Guitar
         score.parts[0].insert(0, clef.TabClef())
 
-    # 2. Create Accompaniment Part using Chord objects
+    # 2. Create Accompaniment Part using explicit Measure objects
+    #    Mirror the melody part's measure structure to ensure alignment
     accompaniment_part = stream.Part()
     accompaniment_part.partName = 'Chords (Tab)'
     accompaniment_part.partAbbreviation = 'Chd'
-
-    # Sync basic attributes from the template part (Time sig, Key sig)
-    # Only copy the FIRST instance of each at offset 0 to avoid duplicating
-    # attributes at all their original offsets, which causes extra empty measures.
-    template_part = score.parts[0] if score.parts else None
-    if template_part:
-        from music21 import meter, key
-        ts_list = template_part.flat.getElementsByClass(meter.TimeSignature)
-        ks_list = template_part.flat.getElementsByClass(key.KeySignature)
-        if ts_list:
-            accompaniment_part.insert(0, ts_list[0])
-        if ks_list:
-            accompaniment_part.insert(0, ks_list[0])
 
     gtr = instrument.AcousticGuitar()
     gtr.midiProgram = 25
     accompaniment_part.insert(0, gtr)
     accompaniment_part.insert(0, clef.TabClef())
 
+    # Build the measure grid from the melody part
+    template_part = score.parts[0] if score.parts else None
+    melody_measures = template_part.getElementsByClass(stream.Measure) if template_part else []
+    
+    measure_grid = []  # list of (measure_number, start_offset, length)
+    for m in melody_measures:
+        measure_grid.append((m.number, m.offset, m.quarterLength))
+
     # Build a mapping of chord technical data for post-processing.
-    # Key: (offset, sorted tuple of MIDI pitches) -> list of (string, fret) tuples
     chord_technical_data = {}
 
+    # Group chords by which measure they belong to
+    chord_entries = []  # (measure_idx, offset_in_measure, pitches, dur, midi_to_tech)
+    
     for i, chord_event in enumerate(parsed_chords):
-        if i < len(optimal_chord_voicings) and optimal_chord_voicings[i]:
-            voicing = optimal_chord_voicings[i]
+        if i >= len(optimal_chord_voicings) or not optimal_chord_voicings[i]:
+            continue
+        voicing = optimal_chord_voicings[i]
+        
+        # Determine duration (time until next chord)
+        if i < len(parsed_chords) - 1:
+            dur = max(0.25, parsed_chords[i+1]['time'] - chord_event['time'])
+        else:
+            dur = 4.0
+
+        t = chord_event['time']
+
+        # Find which measure this chord belongs to
+        m_idx = None
+        for idx, (mnum, m_start, m_len) in enumerate(measure_grid):
+            if m_start <= t < m_start + m_len:
+                m_idx = idx
+                break
+        
+        if m_idx is None:
+            continue
+        
+        # Cap duration at the end of this measure
+        mnum, m_start, m_len = measure_grid[m_idx]
+        remaining_in_measure = (m_start + m_len) - t
+        dur = min(dur, remaining_in_measure)
+        
+        offset_in_measure = t - m_start
+        
+        # Collect pitches and tech data
+        pitches = []
+        midi_to_tech = {}
+        for s_idx, fret in enumerate(voicing['frets']):
+            if fret != -1:
+                pitch_midi = string_midi_values[s_idx] + fret
+                pitches.append(pitch_midi)
+                midi_to_tech[pitch_midi] = (s_idx + 1, fret)
+        
+        if pitches:
+            chord_entries.append((m_idx, offset_in_measure, pitches, dur, midi_to_tech))
+            chord_technical_data[t] = midi_to_tech
+
+    # Now build explicit Measure objects
+    from music21 import meter, key
+    for idx, (mnum, m_start, m_len) in enumerate(measure_grid):
+        m = stream.Measure(number=mnum)
+        
+        # Add time signature and key signature to first measure only
+        if idx == 0 and template_part:
+            ts_list = template_part.flat.getElementsByClass(meter.TimeSignature)
+            ks_list = template_part.flat.getElementsByClass(key.KeySignature)
+            if ts_list:
+                m.insert(0, ts_list[0])
+            if ks_list:
+                m.insert(0, ks_list[0])
+        
+        # Gather chords for this measure
+        measure_chords = [(ofs, p, d, mt) for (mi, ofs, p, d, mt) in chord_entries if mi == idx]
+        measure_chords.sort(key=lambda x: x[0])
+        
+        # Fill with chords and rests
+        current_offset = 0.0
+        for ofs, pitches, dur, midi_to_tech in measure_chords:
+            # Fill gap with rest if needed
+            if ofs > current_offset + 0.001:
+                gap = ofs - current_offset
+                r = note.Rest()
+                r.duration.quarterLength = gap
+                m.insert(current_offset, r)
             
-            # Determine duration (time until next chord)
-            if i < len(parsed_chords) - 1:
-                dur = max(0.25, parsed_chords[i+1]['time'] - chord_event['time'])
-            else:
-                dur = 4.0  # Default
-
-            # Cap duration at the next measure boundary to prevent ties
-            # In the accompaniment stream, measures are at [0,4), [4,8), [8,12), ...
-            t = chord_event['time']
-            next_bar = (int(t / 4) + 1) * 4.0
-            remaining_in_bar = next_bar - t
-            dur = min(dur, remaining_in_bar)
-
-            # Collect all fretted notes for this chord
-            pitches = []
-            # Build midi -> (string, fret) mapping for this chord
-            midi_to_tech = {}
-            for s_idx, fret in enumerate(voicing['frets']):
-                if fret != -1:
-                    pitch_midi = string_midi_values[s_idx] + fret
-                    pitches.append(pitch_midi)
-                    midi_to_tech[pitch_midi] = (s_idx + 1, fret)  # 1-indexed string
-
-            if pitches:
-                # Create a proper Chord object — all notes in one voice
-                c = chord.Chord(pitches)
-                c.duration.quarterLength = dur
-                accompaniment_part.insert(chord_event['time'], c)
-
-                # Store tech data keyed by offset, with midi->tech mapping
-                chord_technical_data[chord_event['time']] = midi_to_tech
+            c = chord.Chord(pitches)
+            c.duration.quarterLength = dur
+            m.insert(ofs, c)
+            current_offset = ofs + dur
+        
+        # Fill remaining space with rest
+        if current_offset < m_len - 0.001:
+            r = note.Rest()
+            r.duration.quarterLength = m_len - current_offset
+            m.insert(current_offset, r)
+        
+        accompaniment_part.append(m)
 
     score.append(accompaniment_part)
 
@@ -117,7 +163,7 @@ def export_to_musicxml(score, melody_events, optimal_melody_fingerings, parsed_c
     try:
         score.write('musicxml', fp=output_xml_path)
         # Apply Post-Processing to inject native Tab metadata and fix technical tags
-        post_process_xml_for_tab(output_xml_path, chord_technical_data, melody_measure_count)
+        post_process_xml_for_tab(output_xml_path, chord_technical_data, melody_measure_count, measure_grid)
         print(f"Optimized MusicXML exported to: {output_xml_path}")
     except Exception as e:
         print(f"Failed to export MusicXML: {e}")
@@ -125,7 +171,7 @@ def export_to_musicxml(score, melody_events, optimal_melody_fingerings, parsed_c
         traceback.print_exc()
 
 
-def post_process_xml_for_tab(xml_path, chord_technical_data=None, melody_measure_count=0):
+def post_process_xml_for_tab(xml_path, chord_technical_data=None, melody_measure_count=0, measure_grid=None):
     """
     Post-processes the MusicXML file to:
     1. Normalize part IDs to P1, P2, ...
@@ -205,7 +251,7 @@ def post_process_xml_for_tab(xml_path, chord_technical_data=None, melody_measure
         accomp_part = root.findall('.//part')[-1] if len(root.findall('.//part')) > 1 else None
         
         if accomp_part is not None:
-            _inject_chord_technical_tags(accomp_part, chord_technical_data, tuning_data)
+            _inject_chord_technical_tags(accomp_part, chord_technical_data, tuning_data, measure_grid)
 
     # --- Write back with DOCTYPE ---
     xml_str = ET.tostring(root, encoding='unicode')
@@ -216,7 +262,7 @@ def post_process_xml_for_tab(xml_path, chord_technical_data=None, melody_measure
         f.write(final_output)
 
 
-def _inject_chord_technical_tags(part_el, chord_technical_data, tuning_data):
+def _inject_chord_technical_tags(part_el, chord_technical_data, tuning_data, measure_grid=None):
     """
     Walk through the accompaniment part's measures and inject <technical> tags
     for each chord note.
@@ -235,7 +281,13 @@ def _inject_chord_technical_tags(part_el, chord_technical_data, tuning_data):
     
     divisions = 10080  # default
     measure_start_beat = 0.0
-    beats_per_measure = 4.0
+    
+    # Build measure beat offset lookup from measure_grid
+    # measure_grid: [(measure_number, start_offset, length), ...]
+    measure_beat_offsets = {}
+    if measure_grid:
+        for mnum, m_start, m_len in measure_grid:
+            measure_beat_offsets[str(mnum)] = m_start
     
     # Pre-compute: round all offset keys to avoid float precision issues
     rounded_tech_data = {}
@@ -249,11 +301,9 @@ def _inject_chord_technical_tags(part_el, chord_technical_data, tuning_data):
         if div_el is not None:
             divisions = int(div_el.text)
         
-        ts_el = measure.find('.//time')
-        if ts_el is not None:
-            b = ts_el.find('beats')
-            if b is not None:
-                beats_per_measure = float(b.text)
+        # Use the melody's measure start offset if available
+        if mnum in measure_beat_offsets:
+            measure_start_beat = measure_beat_offsets[mnum]
         
         current_offset_divs = 0
         pending_dur = 0  # Duration of the current "first note" to defer
@@ -350,5 +400,3 @@ def _inject_chord_technical_tags(part_el, chord_technical_data, tuning_data):
         
         # Apply any remaining pending duration at end of measure
         current_offset_divs += pending_dur
-        
-        measure_start_beat += beats_per_measure

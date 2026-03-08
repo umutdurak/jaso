@@ -2,7 +2,7 @@ import re
 import json
 from .optimizer import find_optimal_melody_path
 
-def generate_tablature(melody_events, parsed_chords, sections, optimal_chord_voicings, optimal_melody_fingerings, output_file):
+def generate_tablature(melody_events, parsed_chords, sections, optimal_chord_voicings, optimal_melody_fingerings, output_file, pickup_length=0.0):
     # Generates the tablature and writes it to the output file.
     
     # Load configuration
@@ -94,7 +94,19 @@ def generate_tablature(melody_events, parsed_chords, sections, optimal_chord_voi
 
     # --- Tablature Generation ---
     total_duration = max(event['time'] + event['duration'] for event in timeline) if timeline else 0
-    num_measures = int(total_duration / BEATS_PER_MEASURE) + 1
+
+    # Build measure start times from the actual score structure:
+    # - If there's a pickup, the first measure is pickup_length beats
+    # - All subsequent measures are BEATS_PER_MEASURE beats
+    measure_starts = []
+    t = 0.0
+    if pickup_length > 0:
+        measure_starts.append(t)  # Pickup measure at 0
+        t = pickup_length
+    while t < total_duration:
+        measure_starts.append(t)
+        t += BEATS_PER_MEASURE
+    num_measures = len(measure_starts)
 
     print(f"Using Fixed Global CPQN: {GLOBAL_CPQN} (Uniform measure width: {GLOBAL_CPQN * BEATS_PER_MEASURE})")
 
@@ -111,9 +123,13 @@ def generate_tablature(melody_events, parsed_chords, sections, optimal_chord_voi
         line_lyrics = "Lyrics: ".ljust(LABEL_WIDTH)
 
         for cur_m in range(line_start_m, line_end_m):
-            measure_start_time = cur_m * BEATS_PER_MEASURE
-            measure_end_time = (cur_m + 1) * BEATS_PER_MEASURE
-            measure_width = GLOBAL_CPQN * BEATS_PER_MEASURE
+            measure_start_time = measure_starts[cur_m]
+            if cur_m + 1 < len(measure_starts):
+                measure_end_time = measure_starts[cur_m + 1]
+            else:
+                measure_end_time = measure_start_time + BEATS_PER_MEASURE
+            measure_beats = measure_end_time - measure_start_time
+            measure_width = int(GLOBAL_CPQN * measure_beats)
 
             # Grids for this specific measure
             m_chord_grid = {s: ['-'] * measure_width for s in ordered_strings}
